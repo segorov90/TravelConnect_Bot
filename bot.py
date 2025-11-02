@@ -1,0 +1,421 @@
+import logging
+from dotenv import load_dotenv
+import os
+from telegram import (
+    Update,
+    ReplyKeyboardMarkup,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup
+)
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    CallbackQueryHandler,
+    filters
+)
+from functools import wraps
+
+# Настройка логирования
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# Токен бота из переменных окружения
+load_dotenv()
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+
+
+# Декоратор для обработки ошибок
+def error_handler(func):
+    @wraps(func)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        try:
+            return await func(update, context)
+        except Exception as e:
+            logger.error(f"Error in {func.__name__}: {e}")
+            if update and update.effective_message:
+                try:
+                    await update.effective_message.reply_text(
+                        "⚠️ Произошла ошибка. Пожалуйста, попробуйте позже."
+                    )
+                except Exception as send_error:
+                    logger.error(f"Failed to send error message: {send_error}")
+
+    return wrapper
+
+
+# Команда /start
+@error_handler
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    logger.info(f"User {user.id} ({user.username}) started the bot")
+
+    keyboard = [
+        ["📱 О eSIM", "🌍 Страны"],
+        ["💳 Тарифы", "🛒 Купить"],
+        ["❓ Помощь", "📞 Контакты"],
+        ["⚙️ Инструкция"]
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+    await update.message.reply_html(
+        f"Привет, {user.mention_html()}!\n\n"
+        "Я бот-помощник по eSIM — современной цифровой сим-карте.\n\n"
+        "Данная сим-карта устанавливается один раз и может использоваться в разных поездках по всему миру!!!\n\n"
+        "Выберите раздел в меню ниже:",
+        reply_markup=reply_markup
+    )
+
+
+# Раздел "О eSIM"
+@error_handler
+async def about_esim(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.info(f"User {update.effective_user.id} requested about esim")
+    text = """
+📱 <b>Что такое eSIM?</b>
+
+eSIM — это встроенная сим-карта, которая:
+• Не требует физической карты
+• Активируется через QR-код
+• Сохраняет Ваш основной номер
+• Экономит место в устройстве
+• Идеальна для путешественников
+
+Поддержка eSIM есть в:
+• iPhone X и новее
+• Google Pixel 3 и новее
+• Samsung Galaxy А56 и новее
+• И других современных устройствах
+    """
+    await update.message.reply_html(text)
+
+
+# Раздел "Покрытие"
+@error_handler
+async def coverage(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.info(f"User {update.effective_user.id} requested coverage")
+    text = """
+🌍 <b>Глобальное покрытие</b>
+
+Наша eSIM работает в 200+ странах мира!
+Ниже перечислены цены на основные направления:
+
+• Турция — от 145₽ за 1 ГБ
+• Египет — от 347₽ за 1 ГБ
+• Таиланд — 120₽ за 1 ГБ
+• ОАЭ — от 285₽ за 1 ГБ
+• Китай — от 120₽ за 1 ГБ
+• Вьетнам — от 158₽ за 1 ГБ
+• Мальдивы — от 440₽ за 1 ГБ
+• Индия — от 453₽ за 1 ГБ
+• Шри-Ланка — 240₽ за 1 ГБ
+• Грузия — от 249₽ за 1 ГБ
+• Армения — от 184₽ за 1 ГБ
+
+
+Карта покрытия: https://travelconnect.online/?p=312
+    """
+    await update.message.reply_html(text)
+
+
+# Раздел "Тарифы"
+@error_handler
+async def tariffs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.info(f"User {update.effective_user.id} requested tariffs")
+    keyboard = [
+        [
+            InlineKeyboardButton(" Европа", callback_data="eu_tariff"),
+            InlineKeyboardButton(" Африка", callback_data="africa_tariff"),
+        ],
+        [
+            InlineKeyboardButton(" Азия", callback_data="asia_tariff"),
+            InlineKeyboardButton(" Америка", callback_data="us_tariff"),
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_html(
+        "💳 <b>Выберите регион для просмотра тарифов:</b>",
+        reply_markup=reply_markup
+    )
+
+
+# Обработчик инлайн-кнопок тарифов
+@error_handler
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+    logger.info(f"User {query.from_user.id} selected tariff: {query.data}")
+
+    tariffs_data = {
+        "eu_tariff": {
+            "name": "Европа",
+            "prices": "• 1 ГБ — 356₽\n• 3 ГБ — 807₽\n• 10 ГБ — 1180₽\nи другие"
+        },
+        "africa_tariff": {
+            "name": "Африка",
+            "prices": "• 1 ГБ — 661₽\n• 3 ГБ — 1881₽\n• 10 ГБ — 6153₽\nи другие"
+        },
+        "asia_tariff": {
+            "name": "Азия",
+            "prices": "• 1 ГБ — 120₽\n• 3 ГБ — 292₽\n• 10 ГБ — 808₽\nи другие"
+        },
+        "us_tariff": {
+            "name": "Америка",
+            "prices": "• 1 ГБ — 148₽\n• 3 ГБ — 341₽\n• 10 ГБ — 1016₽\nи другие"
+        }
+    }
+
+    selected = tariffs_data.get(query.data)
+    if not selected:
+        await query.edit_message_text("Тариф не найден. Пожалуйста, выберите снова.")
+        return
+
+    text = f"🌍 <b>Тарифы для {selected['name']}:</b>\n\n{selected['prices']}"
+
+    await query.edit_message_text(
+        text=text,
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🛒 Купить", url="https://travelconnect.online/?p=312")
+        ]])
+    )
+
+
+# Раздел "Купить"
+@error_handler
+async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.info(f"User {update.effective_user.id} requested buy info")
+    text = """
+🛒 <b>Как приобрести eSIM:</b>
+
+1. Выберите тариф на нашем сайте
+2. Пройдите простую процедуру регистрации
+3. Оплатите любым удобным для Вас способом
+4. Получите QR-код
+5. Отсканируйте QR-код или установите eSIM вручную по инструкции
+6. По прибытии в выбранную страну eSIM активируется автоматически
+7. Купили один раз!!!! Используете установленную eSIM просто меняя тариф
+
+👉 <a href="https://travelconnect.online/?p=312">Оформить заказ</a>
+
+💡 <i>Активация занимает менее 5 минут</i>
+    """
+    await update.message.reply_html(text, disable_web_page_preview=True)
+
+
+# Раздел "Помощь" - обработчик для команды /help
+@error_handler
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.info(f"User {update.effective_user.id} requested help")
+    text = """
+❓ <b>Частые вопросы:</b>
+
+<b>Вопрос:</b> Как проверить поддержку eSIM?
+<b>Ответ:</b> Проверьте настройки телефона: Настройки → Сотовая связь → Добавить тариф/добавить eSIM
+
+<b>Вопрос:</b> Можно ли использовать два номера одновременно?
+<b>Ответ:</b> Да, если устройство поддерживает Dual SIM с eSIM
+
+<b>Вопрос:</b> Сколько времени занимает активация?
+<b>Ответ:</b> Обычно менее 5 минут после сканирования QR-кода
+
+<b>Вопрос:</b> Как установить eSIM?
+<b>Ответ:</b> Используйте кнопку меню: ⚙️ Инструкция
+
+<b>Вопрос:</b> Как пополнить eSIM?
+<b>Ответ:</b> Зайти на сайт под своей учетной записью, выбрать страну и интересующий пакет интернета, произвести оплату
+
+• 📱 О eSIM - узнайте о технологии
+• 🌍 Покрытие - страны и цены
+• 💳 Тарифы - подробные тарифы по регионам
+• 🛒 Купить - инструкция по покупке
+• 📞 Контакты - свяжитесь с нами
+• ⚙️ Инструкция - как использовать eSIM
+    """
+    await update.message.reply_html(text)
+
+
+# Раздел "Контакты"
+@error_handler
+async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.info(f"User {update.effective_user.id} requested contacts")
+    text = """
+📞 <b>Контакты</b>
+
+• Поддержка: http://t.me/TravelConnect_support
+
+• Email: support@travelconnect.com
+
+• Сайт: http://travelconnect.online
+
+
+⏰ <i>Время работы поддержки: 24/7</i>
+    """
+    await update.message.reply_html(text)
+
+
+# Раздел "Инструкция"
+@error_handler
+async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.info(f"User {update.effective_user.id} requested instructions")
+    text = """
+⚙️ <b>Инструкция</b>
+
+• Какие 2 простых действия необходимо сделать, чтобы сим карта предоставила доступ к интернету в роуминге:
+
+• iPhone (Apple)
+
+1. Включите роуминг на добавленной eSIM:
+    Откройте меню Настройки: → Сотовая связь → нажмите на добавленную eSIM → Роуминг данных и включите его 
+
+2. Установите данную eSIM в качестве используемой для сотовых данных:
+    Откройте меню Настройки: → Сотовая связь → Сотовые данные и поставьте отметку напротив установленной eSIM
+
+• Android
+
+1. Включите роуминг на добавленной eSIM:
+    Откройте меню Настройки: →Подключения →Мобильные сети → Роуминг данных и включите его на нашей eSIM 
+
+2. Установите данную eSIM в качестве используемой для сотовых данных:
+    Откройте меню Настройки: →Подключения →Диспетчер SIM карт →Мобильные данные и выберите добавленную eSIM в качестве используемой для мобильных данных
+
+    """
+    await update.message.reply_html(text)
+
+
+# Команда /status для проверки работы бота
+@error_handler
+async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.info(f"User {update.effective_user.id} checked status")
+    await update.message.reply_text("✅ Бот работает нормально")
+
+
+# Улучшенный обработчик текстовых сообщений
+@error_handler
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    text = update.message.text.lower().strip()
+    logger.info(f"User {update.effective_user.id} sent message: '{text}'")
+
+    # Сопоставление текста с обработчиками - ИСПРАВЛЕННАЯ ВЕРСИЯ
+    handler_mapping = {
+        "📱 о esim": about_esim,
+        "🌍 страны": coverage,
+        "💳 тарифы": tariffs,
+        "🛒 купить": buy,
+        "❓ помощь": help_command,
+        "📞 контакты": contacts,
+        "⚙️ инструкция": settings
+    }
+
+    # Удаляем эмодзи для более надежного сопоставления
+    clean_text = text.replace("📱", "").replace("🌍", "").replace("💳", "").replace("🛒", "").replace("❓", "").replace("📞",
+                                                                                                                   "").replace(
+        "⚙️", "").strip()
+
+    # Создаем словарь для сопоставления без эмодзи
+    clean_mapping = {
+        "о esim": about_esim,
+        "страны": coverage,
+        "тарифы": tariffs,
+        "купить": buy,
+        "помощь": help_command,
+        "контакты": contacts,
+        "инструкция": settings
+    }
+
+    # Сначала проверяем точное совпадение с оригинальным текстом
+    if text in handler_mapping:
+        await handler_mapping[text](update, context)
+        return
+
+    # Затем проверяем совпадение без эмодзи
+    if clean_text in clean_mapping:
+        await clean_mapping[clean_text](update, context)
+        return
+
+    # Если не нашли точного совпадения, ищем частичное
+    handler_found = False
+    for clean_key, handler in clean_mapping.items():
+        if clean_key in clean_text:
+            await handler(update, context)
+            handler_found = True
+            break
+
+    if not handler_found:
+        await update.message.reply_text(
+            "Пожалуйста, используйте меню для навигации. "
+            "Если у вас есть вопросы, нажмите '❓ Помощь'"
+        )
+
+
+# Обработчик неизвестных команд
+@error_handler
+async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.info(f"User {update.effective_user.id} sent unknown command: {update.message.text}")
+    await update.message.reply_text(
+        "Неизвестная команда. Используйте /start для отображения меню "
+        "или /help для получения справки."
+    )
+
+
+# Глобальный обработчик ошибок
+async def error_handler_global(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.error(f'Update "{update}" caused error "{context.error}"')
+
+    if update and update.effective_message:
+        try:
+            await update.effective_message.reply_text(
+                "Произошла непредвиденная ошибка. Пожалуйста, попробуйте еще раз."
+            )
+        except Exception as e:
+            logger.error(f"Failed to send error message: {e}")
+
+
+def main() -> None:
+    # Проверка наличия токена
+    if not TOKEN:
+        logger.error("TELEGRAM_BOT_TOKEN environment variable is not set!")
+        print("Ошибка: Переменная окружения TELEGRAM_BOT_TOKEN не установлена!")
+        print("Пожалуйста, установите токен:")
+        print("export TELEGRAM_BOT_TOKEN='ваш_токен'")
+        return
+
+    # Создаем Application
+    application = Application.builder().token(TOKEN).build()
+
+    # Обработчики команд в порядке приоритета
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("status", status))
+    application.add_handler(CallbackQueryHandler(button_handler))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    application.add_handler(MessageHandler(filters.COMMAND, unknown_command))
+
+    # Обработчик ошибок
+    application.add_error_handler(error_handler_global)
+
+    # Запуск бота
+    logger.info("Bot is starting...")
+    print("Бот запускается...")
+
+    try:
+        application.run_polling(
+            poll_interval=1.0,
+            timeout=20,
+            drop_pending_updates=True
+        )
+    except Exception as e:
+        logger.error(f"Failed to start bot: {e}")
+        print(f"Ошибка запуска бота: {e}")
+    finally:
+        logger.info("Bot has stopped.")
+        print("Бот остановлен.")
+
+
+if __name__ == "__main__":
+    main()
