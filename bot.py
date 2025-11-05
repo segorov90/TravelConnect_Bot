@@ -84,6 +84,7 @@ eSIM — это встроенная сим-карта, которая:
 • Сохраняет Ваш основной номер
 • Экономит место в устройстве
 • Идеальна для путешественников
+• Использование eSIM от TravelConnect <b>Выгоднее до 10 раз</b> по сравнению с местными операторами  
 
 Поддержка eSIM есть в:
 • iPhone X и новее
@@ -115,11 +116,14 @@ async def coverage(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 • Шри-Ланка — 240₽ за 1 ГБ
 • Грузия — от 249₽ за 1 ГБ
 • Армения — от 184₽ за 1 ГБ
-
-
-Карта покрытия: https://travelconnect.online/?p=312
     """
-    await update.message.reply_html(text)
+    await update.message.reply_text(
+        text=text,
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🌐 Все страны и тарифы ЗДЕСЬ!!!", url="https://travelconnect.online/?p=312")
+        ]])
+    )
 
 
 # Раздел "Тарифы"
@@ -128,62 +132,77 @@ async def tariffs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info(f"User {update.effective_user.id} requested tariffs")
     keyboard = [
         [
-            InlineKeyboardButton(" Европа", callback_data="eu_tariff"),
-            InlineKeyboardButton(" Африка", callback_data="africa_tariff"),
+            InlineKeyboardButton("🇪🇺 Европа", callback_data="eu_tariff"),
+            InlineKeyboardButton("🌍 Африка", callback_data="africa_tariff"),
         ],
         [
-            InlineKeyboardButton(" Азия", callback_data="asia_tariff"),
-            InlineKeyboardButton(" Америка", callback_data="us_tariff"),
+            InlineKeyboardButton("🌏 Азия", callback_data="asia_tariff"),
+            InlineKeyboardButton("🌎 Америка", callback_data="us_tariff"),
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_html(
+    await update.message.reply_text(
         "💳 <b>Выберите регион для просмотра тарифов:</b>",
+        parse_mode="HTML",
         reply_markup=reply_markup
     )
 
 
-# Обработчик инлайн-кнопок тарифов
+# Обработчик инлайн-кнопок тарифов И других callback
 @error_handler
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
-    logger.info(f"User {query.from_user.id} selected tariff: {query.data}")
 
-    tariffs_data = {
-        "eu_tariff": {
-            "name": "Европа",
-            "prices": "• 1 ГБ — 356₽\n• 3 ГБ — 807₽\n• 10 ГБ — 1180₽\nи другие"
-        },
-        "africa_tariff": {
-            "name": "Африка",
-            "prices": "• 1 ГБ — 661₽\n• 3 ГБ — 1881₽\n• 10 ГБ — 6153₽\nи другие"
-        },
-        "asia_tariff": {
-            "name": "Азия",
-            "prices": "• 1 ГБ — 120₽\n• 3 ГБ — 292₽\n• 10 ГБ — 808₽\nи другие"
-        },
-        "us_tariff": {
-            "name": "Америка",
-            "prices": "• 1 ГБ — 148₽\n• 3 ГБ — 341₽\n• 10 ГБ — 1016₽\nи другие"
+    # Если это тарифы
+    if query.data in ["eu_tariff", "africa_tariff", "asia_tariff", "us_tariff"]:
+        logger.info(f"User {query.from_user.id} selected tariff: {query.data}")
+
+        tariffs_data = {
+            "eu_tariff": {
+                "name": "Европа",
+                "prices": "• 1 ГБ — 356₽\n• 3 ГБ — 807₽\n• 10 ГБ — 1180₽\nи другие"
+            },
+            "africa_tariff": {
+                "name": "Африка",
+                "prices": "• 1 ГБ — 661₽\n• 3 ГБ — 1881₽\n• 10 ГБ — 6153₽\nи другие"
+            },
+            "asia_tariff": {
+                "name": "Азия",
+                "prices": "• 1 ГБ — 120₽\n• 3 ГБ — 292₽\n• 10 ГБ — 808₽\nи другие"
+            },
+            "us_tariff": {
+                "name": "Америка",
+                "prices": "• 1 ГБ — 148₽\n• 3 ГБ — 341₽\n• 10 ГБ — 1016₽\nи другие"
+            }
         }
-    }
 
-    selected = tariffs_data.get(query.data)
-    if not selected:
-        await query.edit_message_text("Тариф не найден. Пожалуйста, выберите снова.")
-        return
+        selected = tariffs_data.get(query.data)
+        if not selected:
+            await query.edit_message_text("Тариф не найден. Пожалуйста, выберите снова.")
+            return
 
-    text = f"🌍 <b>Тарифы для {selected['name']}:</b>\n\n{selected['prices']}"
+        text = f"🌍 <b>Тарифы для {selected['name']}:</b>\n\n{selected['prices']}"
 
-    await query.edit_message_text(
-        text=text,
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🛒 Купить", url="https://travelconnect.online/?p=312")
-        ]])
-    )
+        await query.edit_message_text(
+            text=text,
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🛒 Купить", url="https://travelconnect.online/?p=312")
+            ]])
+        )
+
+    # Если это другие callback (например, open_site)
+    elif query.data == "open_site":
+        await query.message.reply_text(
+            "🔗 Перейдите по ссылке: https://travelconnect.online/?p=312",
+            disable_web_page_preview=True
+        )
+
+    # Если неизвестный callback
+    else:
+        await query.edit_message_text("Команда не распознана. Пожалуйста, выберите снова.")
 
 
 # Раздел "Купить"
@@ -247,16 +266,22 @@ async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     text = """
 📞 <b>Контакты</b>
 
-• Поддержка: http://t.me/TravelConnect_support
+• Сайт: http:&#8203;//travelconnect&#8203;.online
+• Станьте клиентом после быстрой регистрации — и получите 
+<b>персональную поддержку 24/7.</b>
 
-• Email: support@travelconnect.com
-
-• Сайт: http://travelconnect.online
-
-
-⏰ <i>Время работы поддержки: 24/7</i>
+⏰ <i><b>Забота о вас — наш приоритет</b></i>
     """
-    await update.message.reply_html(text)
+
+    keyboard = [
+        [InlineKeyboardButton("🌐 Перейти на сайт: travelconnect.online", url="https://travelconnect.online/?p=312")]
+    ]
+
+    await update.message.reply_text(
+        text=text,
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
 
 # Раздел "Инструкция"
@@ -266,9 +291,15 @@ async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     text = """
 ⚙️ <b>Инструкция</b>
 
+• <b>Удостоверьтись, что Ваше устройство поддерживает eSIM:</b>
+
+•Наберите на своем телефоне (в режиме набора номера) команду: <b>*#06#</b>
+
+•Устройство поддерживает eSIM если появиться номер <b>EID</b>
+
 • Какие 2 простых действия необходимо сделать, чтобы сим карта предоставила доступ к интернету в роуминге:
 
-• iPhone (Apple)
+• <b>iPhone (Apple)</b>
 
 1. Включите роуминг на добавленной eSIM:
     Откройте меню Настройки: → Сотовая связь → нажмите на добавленную eSIM → Роуминг данных и включите его 
@@ -276,7 +307,7 @@ async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 2. Установите данную eSIM в качестве используемой для сотовых данных:
     Откройте меню Настройки: → Сотовая связь → Сотовые данные и поставьте отметку напротив установленной eSIM
 
-• Android
+• <b>Android/Samsung</b>
 
 1. Включите роуминг на добавленной eSIM:
     Откройте меню Настройки: →Подключения →Мобильные сети → Роуминг данных и включите его на нашей eSIM 
@@ -301,7 +332,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     text = update.message.text.lower().strip()
     logger.info(f"User {update.effective_user.id} sent message: '{text}'")
 
-    # Сопоставление текста с обработчиками - ИСПРАВЛЕННАЯ ВЕРСИЯ
+    # Сопоставление текста с обработчиками
     handler_mapping = {
         "📱 о esim": about_esim,
         "🌍 страны": coverage,
