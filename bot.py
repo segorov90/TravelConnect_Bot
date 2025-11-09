@@ -40,7 +40,8 @@ def error_handler(func):
             if update and update.effective_message:
                 try:
                     await update.effective_message.reply_text(
-                        "⚠️ Произошла ошибка. Пожалуйста, попробуйте позже."
+                        "⚠️ Произошла ошибка. Пожалуйста, попробуйте позже.",
+                        disable_web_page_preview=True
                     )
                 except Exception as send_error:
                     logger.error(f"Failed to send error message: {send_error}")
@@ -67,7 +68,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "Я бот-помощник по eSIM — современной цифровой сим-карте.\n\n"
         "Данная сим-карта устанавливается один раз и может использоваться в разных поездках по всему миру!!!\n\n"
         "Выберите раздел в меню ниже:",
-        reply_markup=reply_markup
+        reply_markup=reply_markup,
+        disable_web_page_preview=True
     )
 
 
@@ -92,7 +94,7 @@ eSIM — это встроенная сим-карта, которая:
 • Samsung Galaxy А56 и новее
 • И других современных устройствах
     """
-    await update.message.reply_html(text)
+    await update.message.reply_html(text, disable_web_page_preview=True)
 
 
 # Раздел "Покрытие"
@@ -107,13 +109,13 @@ async def coverage(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 • Турция — от 145₽ за 1 ГБ
 • Египет — от 347₽ за 1 ГБ
-• Таиланд — 120₽ за 1 ГБ
+• Таиланд — от 120₽ за 1 ГБ
 • ОАЭ — от 285₽ за 1 ГБ
 • Китай — от 120₽ за 1 ГБ
 • Вьетнам — от 158₽ за 1 ГБ
 • Мальдивы — от 440₽ за 1 ГБ
 • Индия — от 453₽ за 1 ГБ
-• Шри-Ланка — 240₽ за 1 ГБ
+• Шри-Ланка — от 240₽ за 1 ГБ
 • Грузия — от 249₽ за 1 ГБ
 • Армения — от 184₽ за 1 ГБ
     """
@@ -122,7 +124,8 @@ async def coverage(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup([[
             InlineKeyboardButton("🌐 Все страны и тарифы ЗДЕСЬ!!!", url="https://travelconnect.online/?p=312")
-        ]])
+        ]]),
+        disable_web_page_preview=True
     )
 
 
@@ -145,7 +148,8 @@ async def tariffs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         "💳 <b>Выберите регион для просмотра тарифов:</b>",
         parse_mode="HTML",
-        reply_markup=reply_markup
+        reply_markup=reply_markup,
+        disable_web_page_preview=True
     )
 
 
@@ -162,25 +166,28 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         tariffs_data = {
             "eu_tariff": {
                 "name": "Европа",
-                "prices": "• 1 ГБ — 356₽\n• 3 ГБ — 807₽\n• 10 ГБ — 1180₽\nи другие"
+                "prices": "• 1 ГБ — от 356₽\n• 3 ГБ — от 807₽\n• 10 ГБ — от 1180₽\nи другие"
             },
             "africa_tariff": {
                 "name": "Африка",
-                "prices": "• 1 ГБ — 661₽\n• 3 ГБ — 1881₽\n• 10 ГБ — 6153₽\nи другие"
+                "prices": "• 1 ГБ — от 661₽\n• 3 ГБ — от 1881₽\n• 10 ГБ — от 6153₽\nи другие"
             },
             "asia_tariff": {
                 "name": "Азия",
-                "prices": "• 1 ГБ — 120₽\n• 3 ГБ — 292₽\n• 10 ГБ — 808₽\nи другие"
+                "prices": "• 1 ГБ — от 120₽\n• 3 ГБ — от 292₽\n• 10 ГБ — от 808₽\nи другие"
             },
             "us_tariff": {
                 "name": "Америка",
-                "prices": "• 1 ГБ — 148₽\n• 3 ГБ — 341₽\n• 10 ГБ — 1016₽\nи другие"
+                "prices": "• 1 ГБ — от 148₽\n• 3 ГБ — от 341₽\n• 10 ГБ — от 1016₽\nи другие"
             }
         }
 
         selected = tariffs_data.get(query.data)
         if not selected:
-            await query.edit_message_text("Тариф не найден. Пожалуйста, выберите снова.")
+            await query.edit_message_text(
+                "Тариф не найден. Пожалуйста, выберите снова.",
+                disable_web_page_preview=True
+            )
             return
 
         text = f"🌍 <b>Тарифы для {selected['name']}:</b>\n\n{selected['prices']}"
@@ -190,19 +197,21 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("🛒 Купить", url="https://travelconnect.online/?p=312")
-            ]])
-        )
-
-    # Если это другие callback (например, open_site)
-    elif query.data == "open_site":
-        await query.message.reply_text(
-            "🔗 Перейдите по ссылке: https://travelconnect.online/?p=312",
+            ]]),
             disable_web_page_preview=True
         )
 
+    # Если callback_data = "help" - обрабатываем помощь
+    elif query.data == "help":
+        # Отправляем новое сообщение с помощью
+        await send_help_message(query.message)
+
     # Если неизвестный callback
     else:
-        await query.edit_message_text("Команда не распознана. Пожалуйста, выберите снова.")
+        await query.edit_message_text(
+            "Команда не распознана. Пожалуйста, выберите снова.",
+            disable_web_page_preview=True
+        )
 
 
 # Раздел "Купить"
@@ -220,17 +229,26 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 6. По прибытии в выбранную страну eSIM активируется автоматически
 7. Купили один раз!!!! Используете установленную eSIM просто меняя тариф
 
-👉 <a href="https://travelconnect.online/?p=312">Оформить заказ</a>
-
 💡 <i>Активация занимает менее 5 минут</i>
     """
-    await update.message.reply_html(text, disable_web_page_preview=True)
+
+    # Создаем клавиатуру с несколькими кнопками
+    keyboard = [
+        [InlineKeyboardButton("🛒 Оформить заказ", url="https://travelconnect.online/?p=312")],
+        [InlineKeyboardButton("🌍 Посмотреть тарифы", url="https://travelconnect.online/?p=312")],
+        [InlineKeyboardButton("❓ Помощь", callback_data="help")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_html(
+        text,
+        reply_markup=reply_markup,
+        disable_web_page_preview=True
+    )
 
 
-# Раздел "Помощь" - обработчик для команды /help
-@error_handler
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.info(f"User {update.effective_user.id} requested help")
+# Функция для отправки сообщения помощи
+async def send_help_message(message):
     text = """
 ❓ <b>Частые вопросы:</b>
 
@@ -256,7 +274,14 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • 📞 Контакты - свяжитесь с нами
 • ⚙️ Инструкция - как использовать eSIM
     """
-    await update.message.reply_html(text)
+    await message.reply_html(text, disable_web_page_preview=True)
+
+
+# Раздел "Помощь" - обработчик для команды /help
+@error_handler
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.info(f"User {update.effective_user.id} requested help")
+    await send_help_message(update.message)
 
 
 # Раздел "Контакты"
@@ -266,7 +291,7 @@ async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     text = """
 📞 <b>Контакты</b>
 
-• Сайт: http:&#8203;//travelconnect&#8203;.online
+• Сайт: travelconnect.online
 • Станьте клиентом после быстрой регистрации — и получите 
 <b>персональную поддержку 24/7.</b>
 
@@ -280,7 +305,8 @@ async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         text=text,
         parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        disable_web_page_preview=True
     )
 
 
@@ -316,14 +342,17 @@ async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     Откройте меню Настройки: →Подключения →Диспетчер SIM карт →Мобильные данные и выберите добавленную eSIM в качестве используемой для мобильных данных
 
     """
-    await update.message.reply_html(text)
+    await update.message.reply_html(text, disable_web_page_preview=True)
 
 
 # Команда /status для проверки работы бота
 @error_handler
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info(f"User {update.effective_user.id} checked status")
-    await update.message.reply_text("✅ Бот работает нормально")
+    await update.message.reply_text(
+        "✅ Бот работает нормально",
+        disable_web_page_preview=True
+    )
 
 
 # Улучшенный обработчик текстовых сообщений
@@ -380,7 +409,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not handler_found:
         await update.message.reply_text(
             "Пожалуйста, используйте меню для навигации. "
-            "Если у вас есть вопросы, нажмите '❓ Помощь'"
+            "Если у вас есть вопросы, нажмите '❓ Помощь'",
+            disable_web_page_preview=True
         )
 
 
@@ -390,7 +420,8 @@ async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     logger.info(f"User {update.effective_user.id} sent unknown command: {update.message.text}")
     await update.message.reply_text(
         "Неизвестная команда. Используйте /start для отображения меню "
-        "или /help для получения справки."
+        "или /help для получения справки.",
+        disable_web_page_preview=True
     )
 
 
@@ -401,7 +432,8 @@ async def error_handler_global(update: Update, context: ContextTypes.DEFAULT_TYP
     if update and update.effective_message:
         try:
             await update.effective_message.reply_text(
-                "Произошла непредвиденная ошибка. Пожалуйста, попробуйте еще раз."
+                "Произошла непредвиденная ошибка. Пожалуйста, попробуйте еще раз.",
+                disable_web_page_preview=True
             )
         except Exception as e:
             logger.error(f"Failed to send error message: {e}")
