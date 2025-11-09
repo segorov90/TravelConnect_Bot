@@ -291,7 +291,8 @@ async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     text = """
 📞 <b>Контакты</b>
 
-• Сайт: travelconnect.online
+• Сайт: http:&#8203;//travelconnect&#8203;.online
+
 • Станьте клиентом после быстрой регистрации — и получите 
 <b>персональную поддержку 24/7.</b>
 
